@@ -3,7 +3,7 @@ import { useApp } from '../context/AppContext';
 import { AlertTriangle, Package, TrendingDown, ShoppingCart, Bell } from 'lucide-react';
 
 export const AlertsPage = () => {
-  const { products, getStockAlerts, stockRequests } = useApp();
+  const { products, getStockAlerts, stockRequests, getLocationName } = useApp();
   const alerts = getStockAlerts();
   const pendingRequests = stockRequests.filter(r => r.status === 'pending');
 
@@ -75,7 +75,7 @@ export const AlertsPage = () => {
                   </div>
                   <div>
                     <p className="text-sm font-medium text-gray-800">{product.name}</p>
-                    <p className="text-xs text-gray-500">{product.location} • Mín: {product.minQuantity} {product.unit}(s)</p>
+                    <p className="text-xs text-gray-500">{getLocationName(product.locationId)} • Mín: {product.minQuantity} {product.unit}(s)</p>
                   </div>
                 </div>
                 <div className="text-right">
@@ -112,7 +112,7 @@ export const AlertsPage = () => {
                       </div>
                       <div>
                         <p className="text-sm font-medium text-gray-800">{product.name}</p>
-                        <p className="text-xs text-gray-500">{product.location}</p>
+                        <p className="text-xs text-gray-500">{getLocationName(product.locationId)}</p>
                       </div>
                     </div>
                     <div className="text-right">

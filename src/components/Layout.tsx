@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { 
   LayoutDashboard, Package, FileText, ClipboardList, BarChart3, 
-  AlertTriangle, Users, Settings, LogOut, Menu, X, Bell, ChevronDown
+  AlertTriangle, Users, Settings, LogOut, Menu, X, Bell, ChevronDown,
+  MapPin, LogIn
 } from 'lucide-react';
 
 interface LayoutProps {
@@ -13,8 +14,11 @@ interface LayoutProps {
 
 const menuItems = [
   { id: 'dashboard', label: 'Painel', icon: LayoutDashboard, roles: ['secretario', 'diretor', 'tecnico', 'copa'] },
-  { id: 'inventory', label: 'Inventário', icon: Package, roles: ['secretario', 'diretor', 'tecnico'] },
+  { id: 'stock', label: 'Estoque', icon: Package, roles: ['secretario', 'diretor', 'tecnico', 'copa'] },
+  { id: 'entry', label: 'Entrada', icon: LogIn, roles: ['secretario', 'diretor', 'tecnico'] },
+  { id: 'inventory', label: 'Cadastro Produtos', icon: Package, roles: ['secretario', 'diretor', 'tecnico'] },
   { id: 'invoices', label: 'Notas Fiscais', icon: FileText, roles: ['secretario', 'diretor', 'tecnico'] },
+  { id: 'locations', label: 'Locais', icon: MapPin, roles: ['secretario', 'diretor', 'tecnico'] },
   { id: 'requests', label: 'Requisições', icon: ClipboardList, roles: ['secretario', 'diretor', 'tecnico', 'copa'] },
   { id: 'reports', label: 'Relatórios', icon: BarChart3, roles: ['secretario', 'diretor', 'tecnico'] },
   { id: 'alerts', label: 'Alertas', icon: AlertTriangle, roles: ['secretario', 'diretor', 'tecnico', 'copa'] },

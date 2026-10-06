@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
 import { useApp, Product } from '../context/AppContext';
-import { Plus, Search, Edit2, Trash2, Package, Filter, X } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Package, Filter, X, MapPin } from 'lucide-react';
 
 export const InventoryPage = () => {
-  const { products, addProduct, updateProduct, deleteProduct } = useApp();
+  const { products, locations, addProduct, updateProduct, deleteProduct, getLocationName } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [showModal, setShowModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [formData, setFormData] = useState({
-    name: '', category: 'limpeza' as Product['category'], unit: 'unidade', quantity: 0, minQuantity: 0, location: ''
+    name: '', category: 'limpeza' as Product['category'], unit: 'unidade', quantity: 0, minQuantity: 0, locationId: ''
   });
 
   const filteredProducts = products.filter(p => {
@@ -20,7 +20,7 @@ export const InventoryPage = () => {
 
   const openAddModal = () => {
     setEditingProduct(null);
-    setFormData({ name: '', category: 'limpeza', unit: 'unidade', quantity: 0, minQuantity: 0, location: '' });
+    setFormData({ name: '', category: 'limpeza', unit: 'unidade', quantity: 0, minQuantity: 0, locationId: locations[0]?.id || '' });
     setShowModal(true);
   };
 
@@ -32,7 +32,7 @@ export const InventoryPage = () => {
       unit: product.unit,
       quantity: product.quantity,
       minQuantity: product.minQuantity,
-      location: product.location,
+      locationId: product.locationId,
     });
     setShowModal(true);
   };
@@ -78,8 +78,8 @@ export const InventoryPage = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold text-gray-800">Inventário de Produtos</h2>
-          <p className="text-sm text-gray-500">Gerencie todos os produtos do estoque</p>
+          <h2 className="text-xl font-bold text-gray-800">Cadastro de Produtos</h2>
+          <p className="text-sm text-gray-500">Cadastre e gerencie os produtos do estoque</p>
         </div>
         <button onClick={openAddModal} className="btn-primary flex items-center gap-2">
           <Plus className="w-4 h-4" />
@@ -143,7 +143,9 @@ export const InventoryPage = () => {
                         </div>
                         <div>
                           <p className="text-sm font-medium text-gray-800">{product.name}</p>
-                          <p className="text-xs text-gray-500 sm:hidden">{getCategoryBadge(product.category)}</p>
+                          <p className="text-xs text-gray-500 sm:hidden flex items-center gap-1">
+                            <MapPin className="w-3 h-3" /> {getLocationName(product.locationId)}
+                          </p>
                         </div>
                       </div>
                     </td>
@@ -158,7 +160,12 @@ export const InventoryPage = () => {
                     <td className="px-4 py-3 text-center">
                       <span className={`badge ${status.class}`}>{status.label}</span>
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-600 hidden lg:table-cell">{product.location}</td>
+                    <td className="px-4 py-3 hidden lg:table-cell">
+                      <div className="flex items-center gap-1">
+                        <MapPin className="w-3 h-3 text-gray-400" />
+                        <span className="text-sm text-gray-600">{getLocationName(product.locationId)}</span>
+                      </div>
+                    </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-center gap-1">
                         <button onClick={() => openEditModal(product)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
@@ -186,7 +193,7 @@ export const InventoryPage = () => {
       {/* Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl w-full max-w-md animate-slide-up">
+          <div className="bg-white rounded-2xl w-full max-w-md animate-slide-up max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between p-6 border-b border-gray-100">
               <h3 className="text-lg font-semibold text-gray-800">
                 {editingProduct ? 'Editar Produto' : 'Novo Produto'}
@@ -261,14 +268,19 @@ export const InventoryPage = () => {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Localização</label>
-                <input
-                  type="text"
-                  value={formData.location}
-                  onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                <label className="block text-sm font-medium text-gray-700 mb-1">Local de Armazenamento</label>
+                <select
+                  value={formData.locationId}
+                  onChange={(e) => setFormData({ ...formData, locationId: e.target.value })}
                   className="input-field"
-                  placeholder="Ex: Almoxarifado A"
-                />
+                  required
+                >
+                  <option value="">Selecione o local</option>
+                  {locations.map(loc => (
+                    <option key={loc.id} value={loc.id}>{loc.name}</option>
+                  ))}
+                </select>
+                <p className="text-xs text-gray-500 mt-1">Onde este produto será armazenado</p>
               </div>
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => setShowModal(false)} className="btn-secondary flex-1">

@@ -9,6 +9,12 @@ export interface User {
   password: string;
 }
 
+export interface StorageLocation {
+  id: string;
+  name: string;
+  description: string;
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -16,7 +22,7 @@ export interface Product {
   unit: string;
   quantity: number;
   minQuantity: number;
-  location: string;
+  locationId: string;
 }
 
 export interface Supplier {
@@ -36,6 +42,7 @@ export interface StockEntry {
   invoiceNumber: string;
   danfe?: string;
   notes?: string;
+  entryType: 'invoice' | 'manual';
 }
 
 export interface StockRequest {
@@ -61,6 +68,7 @@ interface AppState {
   users: User[];
   products: Product[];
   suppliers: Supplier[];
+  locations: StorageLocation[];
   stockEntries: StockEntry[];
   stockRequests: StockRequest[];
   consumptionRecords: ConsumptionRecord[];
@@ -79,8 +87,21 @@ interface AppContextType extends AppState {
   addConsumptionRecord: (record: ConsumptionRecord) => void;
   addSupplier: (supplier: Supplier) => void;
   addUser: (user: User) => void;
+  addLocation: (location: StorageLocation) => void;
+  updateLocation: (location: StorageLocation) => void;
+  deleteLocation: (id: string) => void;
   getStockAlerts: () => Product[];
+  getLocationName: (locationId: string) => string;
+  findProductByName: (name: string) => Product | undefined;
 }
+
+const defaultLocations: StorageLocation[] = [
+  { id: 'loc1', name: 'Armário de Limpeza', description: 'Armário interno do almoxarifado - produtos de limpeza' },
+  { id: 'loc2', name: 'Armário da Copa', description: 'Armário interno da copa - café, açúcar, copos' },
+  { id: 'loc3', name: 'Armário Externo', description: 'Armário do corredor - lustra móveis, desinfetantes' },
+  { id: 'loc4', name: 'Depósito de Água', description: 'Área ao lado da copa - galões de água' },
+  { id: 'loc5', name: 'Prateleira de Papelaria', description: 'Prateleira do almoxarifado - papéis e descartáveis' },
+];
 
 const defaultUsers: User[] = [
   { id: '1', name: 'Secretário Admin', email: 'secretario@sggd.gov.br', role: 'secretario', password: '123456' },
@@ -90,18 +111,20 @@ const defaultUsers: User[] = [
 ];
 
 const defaultProducts: Product[] = [
-  { id: '1', name: 'Detergente Líquido 500ml', category: 'limpeza', unit: 'unidade', quantity: 45, minQuantity: 20, location: 'Almoxarifado A' },
-  { id: '2', name: 'Desinfetante 2L', category: 'limpeza', unit: 'unidade', quantity: 30, minQuantity: 15, location: 'Almoxarifado A' },
-  { id: '3', name: 'Papel Toalha', category: 'limpeza', unit: 'rolo', quantity: 60, minQuantity: 25, location: 'Almoxarifado A' },
-  { id: '4', name: 'Saco de Lixo 100L', category: 'limpeza', unit: 'pacote', quantity: 18, minQuantity: 20, location: 'Almoxarifado A' },
-  { id: '5', name: 'Água Sanitária 2L', category: 'limpeza', unit: 'unidade', quantity: 25, minQuantity: 10, location: 'Almoxarifado A' },
-  { id: '6', name: 'Copo Descartável 200ml', category: 'copa', unit: 'pacote', quantity: 35, minQuantity: 15, location: 'Copa' },
-  { id: '7', name: 'Café em Pó 500g', category: 'copa', unit: 'pacote', quantity: 12, minQuantity: 8, location: 'Copa' },
-  { id: '8', name: 'Açúcar Cristal 5kg', category: 'copa', unit: 'pacote', quantity: 8, minQuantity: 4, location: 'Copa' },
-  { id: '9', name: 'Filtro de Café', category: 'copa', unit: 'caixa', quantity: 10, minQuantity: 5, location: 'Copa' },
-  { id: '10', name: 'Galão de Água 20L', category: 'agua', unit: 'galão', quantity: 15, minQuantity: 8, location: 'Copa' },
-  { id: '11', name: 'Álcool 70% 1L', category: 'limpeza', unit: 'unidade', quantity: 20, minQuantity: 10, location: 'Almoxarifado A' },
-  { id: '12', name: 'Sabonete Líquido 500ml', category: 'limpeza', unit: 'unidade', quantity: 14, minQuantity: 8, location: 'Almoxarifado A' },
+  { id: '1', name: 'Detergente Líquido 500ml', category: 'limpeza', unit: 'unidade', quantity: 45, minQuantity: 20, locationId: 'loc1' },
+  { id: '2', name: 'Desinfetante 2L', category: 'limpeza', unit: 'unidade', quantity: 30, minQuantity: 15, locationId: 'loc1' },
+  { id: '3', name: 'Papel Toalha', category: 'limpeza', unit: 'rolo', quantity: 60, minQuantity: 25, locationId: 'loc5' },
+  { id: '4', name: 'Saco de Lixo 100L', category: 'limpeza', unit: 'pacote', quantity: 18, minQuantity: 20, locationId: 'loc1' },
+  { id: '5', name: 'Água Sanitária 2L', category: 'limpeza', unit: 'unidade', quantity: 25, minQuantity: 10, locationId: 'loc3' },
+  { id: '6', name: 'Copo Descartável 200ml', category: 'copa', unit: 'pacote', quantity: 35, minQuantity: 15, locationId: 'loc2' },
+  { id: '7', name: 'Café em Pó 500g', category: 'copa', unit: 'pacote', quantity: 12, minQuantity: 8, locationId: 'loc2' },
+  { id: '8', name: 'Açúcar Cristal 5kg', category: 'copa', unit: 'pacote', quantity: 8, minQuantity: 4, locationId: 'loc2' },
+  { id: '9', name: 'Filtro de Café', category: 'copa', unit: 'caixa', quantity: 10, minQuantity: 5, locationId: 'loc2' },
+  { id: '10', name: 'Galão de Água 20L', category: 'agua', unit: 'galão', quantity: 15, minQuantity: 8, locationId: 'loc4' },
+  { id: '11', name: 'Álcool 70% 1L', category: 'limpeza', unit: 'unidade', quantity: 20, minQuantity: 10, locationId: 'loc1' },
+  { id: '12', name: 'Sabonete Líquido 500ml', category: 'limpeza', unit: 'unidade', quantity: 14, minQuantity: 8, locationId: 'loc1' },
+  { id: '13', name: 'Lustra Móveis 200ml', category: 'limpeza', unit: 'unidade', quantity: 8, minQuantity: 4, locationId: 'loc3' },
+  { id: '14', name: 'Papel Higiênico 30m', category: 'copa', unit: 'rolo', quantity: 40, minQuantity: 20, locationId: 'loc5' },
 ];
 
 const defaultSuppliers: Supplier[] = [
@@ -120,14 +143,40 @@ export const useApp = () => {
 
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [state, setState] = useState<AppState>(() => {
-    const saved = localStorage.getItem('sggd-stock-app');
+    const saved = localStorage.getItem('sggd-stock-app-v2');
     if (saved) {
-      return JSON.parse(saved);
+      try {
+        const parsed = JSON.parse(saved);
+        // Migration: add locations if not present
+        if (!parsed.locations) {
+          parsed.locations = defaultLocations;
+        }
+        // Migration: convert old location string to locationId
+        if (parsed.products) {
+          parsed.products = parsed.products.map((p: any) => {
+            if (p.location && !p.locationId) {
+              // Try to map old location names to new IDs
+              const locMap: Record<string, string> = {
+                'Almoxarifado A': 'loc1',
+                'Copa': 'loc2',
+              };
+              p.locationId = locMap[p.location] || 'loc1';
+              delete p.location;
+            }
+            if (!p.locationId) p.locationId = 'loc1';
+            return p;
+          });
+        }
+        return parsed;
+      } catch {
+        // Fall through to defaults
+      }
     }
     return {
       users: defaultUsers,
       products: defaultProducts,
       suppliers: defaultSuppliers,
+      locations: defaultLocations,
       stockEntries: [],
       stockRequests: [],
       consumptionRecords: [],
@@ -136,7 +185,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   });
 
   useEffect(() => {
-    localStorage.setItem('sggd-stock-app', JSON.stringify(state));
+    localStorage.setItem('sggd-stock-app-v2', JSON.stringify(state));
   }, [state]);
 
   const login = (email: string, password: string): boolean => {
@@ -169,7 +218,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const addStockEntry = (entry: StockEntry) => {
     setState(prev => {
-      const product = prev.products.find(p => p.id === entry.productId);
       const updatedProducts = prev.products.map(p =>
         p.id === entry.productId ? { ...p, quantity: p.quantity + entry.quantity } : p
       );
@@ -190,7 +238,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       let updatedProducts = prev.products;
       if (request.status === 'delivered') {
         updatedProducts = prev.products.map(p =>
-          p.id === request.productId ? { ...p, quantity: p.quantity - request.quantity } : p
+          p.id === request.productId ? { ...p, quantity: Math.max(0, p.quantity - request.quantity) } : p
         );
       }
       return {
@@ -213,8 +261,36 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setState(prev => ({ ...prev, users: [...prev.users, user] }));
   };
 
+  const addLocation = (location: StorageLocation) => {
+    setState(prev => ({ ...prev, locations: [...prev.locations, location] }));
+  };
+
+  const updateLocation = (location: StorageLocation) => {
+    setState(prev => ({
+      ...prev,
+      locations: prev.locations.map(l => l.id === location.id ? location : l),
+    }));
+  };
+
+  const deleteLocation = (id: string) => {
+    setState(prev => ({ ...prev, locations: prev.locations.filter(l => l.id !== id) }));
+  };
+
   const getStockAlerts = (): Product[] => {
     return state.products.filter(p => p.quantity <= p.minQuantity);
+  };
+
+  const getLocationName = (locationId: string): string => {
+    const loc = state.locations.find(l => l.id === locationId);
+    return loc?.name || 'Não definido';
+  };
+
+  const findProductByName = (name: string): Product | undefined => {
+    return state.products.find(p => 
+      p.name.toLowerCase() === name.toLowerCase() ||
+      p.name.toLowerCase().includes(name.toLowerCase()) ||
+      name.toLowerCase().includes(p.name.toLowerCase())
+    );
   };
 
   return (
@@ -231,7 +307,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       addConsumptionRecord,
       addSupplier,
       addUser,
+      addLocation,
+      updateLocation,
+      deleteLocation,
       getStockAlerts,
+      getLocationName,
+      findProductByName,
     }}>
       {children}
     </AppContext.Provider>

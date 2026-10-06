@@ -9,6 +9,9 @@ import { ReportsPage } from './pages/ReportsPage';
 import { AlertsPage } from './pages/AlertsPage';
 import { UsersPage } from './pages/UsersPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { EntryPage } from './pages/EntryPage';
+import { StockPage } from './pages/StockPage';
+import { LocationsPage } from './pages/LocationsPage';
 import { Layout } from './components/Layout';
 
 const AppContent = () => {
@@ -31,8 +34,11 @@ const AppContent = () => {
   const renderPage = () => {
     switch (currentPage) {
       case 'dashboard': return <DashboardPage />;
+      case 'stock': return <StockPage />;
+      case 'entry': return <EntryPage />;
       case 'inventory': return <InventoryPage />;
       case 'invoices': return <InvoicesPage />;
+      case 'locations': return <LocationsPage />;
       case 'requests': return <RequestsPage />;
       case 'reports': return <ReportsPage />;
       case 'alerts': return <AlertsPage />;

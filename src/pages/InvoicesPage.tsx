@@ -129,6 +129,7 @@ export const InvoicesPage = () => {
           date: parsedInvoice.date,
           supplierId: suppliers[0]?.id || '1',
           invoiceNumber: parsedInvoice.number,
+          entryType: 'invoice',
         });
       }
     });
