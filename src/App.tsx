@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { AppProvider, useApp } from './context/AppContext';
+import { ToastProvider } from './components/ToastProvider';
 import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { InventoryPage } from './pages/InventoryPage';
@@ -12,19 +13,42 @@ import { SettingsPage } from './pages/SettingsPage';
 import { EntryPage } from './pages/EntryPage';
 import { StockPage } from './pages/StockPage';
 import { LocationsPage } from './pages/LocationsPage';
+import { PhysicalInventoryPage } from './pages/PhysicalInventoryPage';
+import { AuditPage } from './pages/AuditPage';
 import { Layout } from './components/Layout';
+import { CommandPalette } from './components/CommandPalette';
 
 const AppContent = () => {
-  const { currentUser } = useApp();
+  const { currentUser, darkMode } = useApp();
   const [currentPage, setCurrentPage] = useState('dashboard');
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
 
   // Register service worker for PWA
   useEffect(() => {
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').catch(() => {
-        // Service worker registration failed
-      });
+      navigator.serviceWorker.register('/sw.js').catch(() => {});
     }
+  }, []);
+
+  // Dark mode
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [darkMode]);
+
+  // Global keyboard shortcut
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setCommandPaletteOpen(prev => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
   if (!currentUser) {
@@ -39,6 +63,8 @@ const AppContent = () => {
       case 'inventory': return <InventoryPage />;
       case 'invoices': return <InvoicesPage />;
       case 'locations': return <LocationsPage />;
+      case 'physical-inventory': return <PhysicalInventoryPage />;
+      case 'audit': return <AuditPage />;
       case 'requests': return <RequestsPage />;
       case 'reports': return <ReportsPage />;
       case 'alerts': return <AlertsPage />;
@@ -51,6 +77,11 @@ const AppContent = () => {
   return (
     <Layout currentPage={currentPage} onNavigate={setCurrentPage}>
       {renderPage()}
+      <CommandPalette
+        isOpen={commandPaletteOpen}
+        onClose={() => setCommandPaletteOpen(false)}
+        onNavigate={(page) => { setCurrentPage(page); setCommandPaletteOpen(false); }}
+      />
     </Layout>
   );
 };
@@ -58,7 +89,9 @@ const AppContent = () => {
 function App() {
   return (
     <AppProvider>
-      <AppContent />
+      <ToastProvider>
+        <AppContent />
+      </ToastProvider>
     </AppProvider>
   );
 }

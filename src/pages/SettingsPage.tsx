@@ -3,8 +3,8 @@ import { useApp } from '../context/AppContext';
 import { Settings, Building, Bell, Database, Shield, Save, RefreshCw } from 'lucide-react';
 
 export const SettingsPage = () => {
-  const { suppliers, addSupplier } = useApp();
-  const [activeTab, setActiveTab] = useState<'general' | 'suppliers' | 'notifications'>('general');
+  const { suppliers, addSupplier, darkMode, toggleDarkMode, exportData, importData } = useApp();
+  const [activeTab, setActiveTab] = useState<'general' | 'suppliers' | 'notifications' | 'backup'>('general');
   const [orgName, setOrgName] = useState('Secretaria de Gestão e Governo Digital');
   const [orgCnpj, setOrgCnpj] = useState('00.000.000/0001-00');
   const [saved, setSaved] = useState(false);
@@ -39,11 +39,12 @@ export const SettingsPage = () => {
       </div>
 
       {/* Tabs */}
-      <div className="card p-1 flex gap-1">
+      <div className="card p-1 flex gap-1 overflow-x-auto">
         {[
           { id: 'general', label: 'Geral', icon: Building },
           { id: 'suppliers', label: 'Fornecedores', icon: Database },
           { id: 'notifications', label: 'Notificações', icon: Bell },
+          { id: 'backup', label: 'Backup', icon: Database },
         ].map(tab => {
           const Icon = tab.icon;
           return (
@@ -87,6 +88,25 @@ export const SettingsPage = () => {
                   className="input-field"
                 />
               </div>
+            </div>
+          </div>
+
+          <div className="pt-4 border-t border-gray-100">
+            <h3 className="text-base font-semibold text-gray-800 mb-4">Aparência</h3>
+            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+              <div>
+                <p className="text-sm font-medium text-gray-800">Modo Escuro</p>
+                <p className="text-xs text-gray-500">Alterne entre tema claro e escuro</p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  className="sr-only peer" 
+                  checked={darkMode}
+                  onChange={toggleDarkMode}
+                />
+                <div className="w-11 h-6 bg-gray-200 peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+              </label>
             </div>
           </div>
 
@@ -168,6 +188,72 @@ export const SettingsPage = () => {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Backup */}
+      {activeTab === 'backup' && (
+        <div className="card space-y-4">
+          <h3 className="text-base font-semibold text-gray-800">Backup e Restauração</h3>
+          <p className="text-sm text-gray-500">Exporte ou importe dados do sistema</p>
+          
+          <div className="space-y-3">
+            <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+              <h4 className="text-sm font-medium text-green-800 mb-2">Exportar Dados</h4>
+              <p className="text-xs text-green-600 mb-3">Baixe um arquivo JSON com todos os dados do sistema</p>
+              <button
+                onClick={() => {
+                  const data = exportData();
+                  const blob = new Blob([data], { type: 'application/json' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `sggd-backup-${new Date().toISOString().split('T')[0]}.json`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                }}
+                className="btn-success text-sm"
+              >
+                Baixar Backup
+              </button>
+            </div>
+
+            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <h4 className="text-sm font-medium text-blue-800 mb-2">Importar Dados</h4>
+              <p className="text-xs text-blue-600 mb-3">Restaure dados a partir de um arquivo de backup</p>
+              <input
+                type="file"
+                accept=".json"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                      const content = event.target?.result as string;
+                      if (importData(content)) {
+                        alert('Dados importados com sucesso!');
+                        window.location.reload();
+                      } else {
+                        alert('Erro ao importar dados. Verifique o arquivo.');
+                      }
+                    };
+                    reader.readAsText(file);
+                  }
+                }}
+                className="text-sm"
+              />
+            </div>
+
+            <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+              <h4 className="text-sm font-medium text-amber-800 mb-2">Recomendações</h4>
+              <ul className="text-xs text-amber-700 space-y-1">
+                <li>• Faça backup regularmente (semanalmente recomendado)</li>
+                <li>• Armazene os backups em local seguro</li>
+                <li>• Teste a restauração periodicamente</li>
+                <li>• Mantenha pelo menos 3 backups recentes</li>
+              </ul>
+            </div>
           </div>
         </div>
       )}

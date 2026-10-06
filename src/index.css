@@ -171,3 +171,87 @@
 .animate-slide-up {
   animation: slideUp 0.3s ease-out;
 }
+
+/* Dark Mode */
+html.dark {
+  color-scheme: dark;
+}
+
+html.dark body {
+  background-color: #0f172a;
+  color: #e2e8f0;
+}
+
+html.dark .card {
+  background-color: #1e293b;
+  border-color: #334155;
+  color: #e2e8f0;
+}
+
+html.dark .input-field {
+  background-color: #1e293b;
+  border-color: #334155;
+  color: #e2e8f0;
+}
+
+html.dark .input-field::placeholder {
+  color: #64748b;
+}
+
+html.dark .btn-secondary {
+  background-color: #334155;
+  border-color: #475569;
+  color: #e2e8f0;
+}
+
+html.dark .btn-secondary:hover {
+  background-color: #475569;
+}
+
+html.dark .bg-gray-50 {
+  background-color: #1e293b;
+}
+
+html.dark .bg-gray-100 {
+  background-color: #334155;
+}
+
+html.dark .text-gray-800 {
+  color: #e2e8f0;
+}
+
+html.dark .text-gray-700 {
+  color: #cbd5e1;
+}
+
+html.dark .text-gray-600 {
+  color: #94a3b8;
+}
+
+html.dark .text-gray-500 {
+  color: #64748b;
+}
+
+html.dark .border-gray-100 {
+  border-color: #334155;
+}
+
+html.dark .border-gray-200 {
+  border-color: #475569;
+}
+
+html.dark .divide-gray-50 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #334155;
+}
+
+html.dark .divide-gray-100 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #334155;
+}
+
+html.dark .hover\:bg-gray-50:hover {
+  background-color: #1e293b;
+}
+
+html.dark .hover\:bg-gray-100:hover {
+  background-color: #334155;
+}

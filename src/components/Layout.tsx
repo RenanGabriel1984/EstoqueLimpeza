@@ -3,7 +3,7 @@ import { useApp } from '../context/AppContext';
 import { 
   LayoutDashboard, Package, FileText, ClipboardList, BarChart3, 
   AlertTriangle, Users, Settings, LogOut, Menu, X, Bell, ChevronDown,
-  MapPin, LogIn
+  MapPin, LogIn, Search
 } from 'lucide-react';
 
 interface LayoutProps {
@@ -12,6 +12,8 @@ interface LayoutProps {
   onNavigate: (page: string) => void;
 }
 
+import { ClipboardCheck, Shield } from 'lucide-react';
+
 const menuItems = [
   { id: 'dashboard', label: 'Painel', icon: LayoutDashboard, roles: ['secretario', 'diretor', 'tecnico', 'copa'] },
   { id: 'stock', label: 'Estoque', icon: Package, roles: ['secretario', 'diretor', 'tecnico', 'copa'] },
@@ -19,6 +21,8 @@ const menuItems = [
   { id: 'inventory', label: 'Cadastro Produtos', icon: Package, roles: ['secretario', 'diretor', 'tecnico'] },
   { id: 'invoices', label: 'Notas Fiscais', icon: FileText, roles: ['secretario', 'diretor', 'tecnico'] },
   { id: 'locations', label: 'Locais', icon: MapPin, roles: ['secretario', 'diretor', 'tecnico'] },
+  { id: 'physical-inventory', label: 'Inventário Físico', icon: ClipboardCheck, roles: ['secretario', 'diretor', 'tecnico'] },
+  { id: 'audit', label: 'Auditoria', icon: Shield, roles: ['secretario', 'diretor'] },
   { id: 'requests', label: 'Requisições', icon: ClipboardList, roles: ['secretario', 'diretor', 'tecnico', 'copa'] },
   { id: 'reports', label: 'Relatórios', icon: BarChart3, roles: ['secretario', 'diretor', 'tecnico'] },
   { id: 'alerts', label: 'Alertas', icon: AlertTriangle, roles: ['secretario', 'diretor', 'tecnico', 'copa'] },
@@ -137,6 +141,18 @@ export const Layout = ({ children, currentPage, onNavigate }: LayoutProps) => {
               </h2>
             </div>
             <div className="flex items-center gap-2">
+              {/* Search shortcut */}
+              <button 
+                onClick={() => {
+                  const event = new KeyboardEvent('keydown', { key: 'k', ctrlKey: true });
+                  window.dispatchEvent(event);
+                }}
+                className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors text-sm text-gray-500"
+              >
+                <Search className="w-4 h-4" />
+                <span>Buscar</span>
+                <kbd className="px-1.5 py-0.5 bg-white border border-gray-200 rounded text-[10px]">⌘K</kbd>
+              </button>
               {/* Alerts button */}
               <button 
                 onClick={() => onNavigate('alerts')}

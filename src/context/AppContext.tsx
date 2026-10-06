@@ -64,6 +64,33 @@ export interface ConsumptionRecord {
   department: string;
 }
 
+export interface AuditLog {
+  id: string;
+  action: 'create' | 'update' | 'delete' | 'entry' | 'request' | 'approve' | 'reject' | 'inventory';
+  entityType: 'product' | 'user' | 'location' | 'request' | 'entry' | 'inventory';
+  entityId: string;
+  userId: string;
+  userName: string;
+  timestamp: string;
+  details: string;
+  oldValue?: any;
+  newValue?: any;
+}
+
+export interface PhysicalInventory {
+  id: string;
+  date: string;
+  performedBy: string;
+  status: 'in_progress' | 'completed' | 'reconciled';
+  items: {
+    productId: string;
+    expectedQuantity: number;
+    countedQuantity: number;
+    difference: number;
+    notes?: string;
+  }[];
+}
+
 interface AppState {
   users: User[];
   products: Product[];
@@ -72,7 +99,10 @@ interface AppState {
   stockEntries: StockEntry[];
   stockRequests: StockRequest[];
   consumptionRecords: ConsumptionRecord[];
+  auditLogs: AuditLog[];
+  physicalInventories: PhysicalInventory[];
   currentUser: User | null;
+  darkMode: boolean;
 }
 
 interface AppContextType extends AppState {
@@ -93,6 +123,12 @@ interface AppContextType extends AppState {
   getStockAlerts: () => Product[];
   getLocationName: (locationId: string) => string;
   findProductByName: (name: string) => Product | undefined;
+  addAuditLog: (log: Omit<AuditLog, 'id' | 'timestamp'>) => void;
+  addPhysicalInventory: (inventory: PhysicalInventory) => void;
+  updatePhysicalInventory: (inventory: PhysicalInventory) => void;
+  toggleDarkMode: () => void;
+  exportData: () => string;
+  importData: (data: string) => boolean;
 }
 
 const defaultLocations: StorageLocation[] = [
@@ -180,7 +216,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       stockEntries: [],
       stockRequests: [],
       consumptionRecords: [],
+      auditLogs: [],
+      physicalInventories: [],
       currentUser: null,
+      darkMode: false,
     };
   });
 
@@ -293,6 +332,44 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     );
   };
 
+  const addAuditLog = (log: Omit<AuditLog, 'id' | 'timestamp'>) => {
+    const newLog: AuditLog = {
+      ...log,
+      id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+      timestamp: new Date().toISOString(),
+    };
+    setState(prev => ({ ...prev, auditLogs: [...prev.auditLogs, newLog] }));
+  };
+
+  const addPhysicalInventory = (inventory: PhysicalInventory) => {
+    setState(prev => ({ ...prev, physicalInventories: [...prev.physicalInventories, inventory] }));
+  };
+
+  const updatePhysicalInventory = (inventory: PhysicalInventory) => {
+    setState(prev => ({
+      ...prev,
+      physicalInventories: prev.physicalInventories.map(i => i.id === inventory.id ? inventory : i),
+    }));
+  };
+
+  const toggleDarkMode = () => {
+    setState(prev => ({ ...prev, darkMode: !prev.darkMode }));
+  };
+
+  const exportData = (): string => {
+    return JSON.stringify(state, null, 2);
+  };
+
+  const importData = (data: string): boolean => {
+    try {
+      const parsed = JSON.parse(data);
+      setState(parsed);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
   return (
     <AppContext.Provider value={{
       ...state,
@@ -313,6 +390,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       getStockAlerts,
       getLocationName,
       findProductByName,
+      addAuditLog,
+      addPhysicalInventory,
+      updatePhysicalInventory,
+      toggleDarkMode,
+      exportData,
+      importData,
     }}>
       {children}
     </AppContext.Provider>
