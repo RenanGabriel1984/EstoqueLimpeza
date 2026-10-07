@@ -1,386 +1,495 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell, AreaChart, Area, Legend } from 'recharts';
-import { Calendar, TrendingUp, Package, Download, Filter } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell, AreaChart, Area, Legend, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts';
+import { TrendingUp, TrendingDown, AlertTriangle, CheckCircle, Package, DollarSign, Calendar, Target, Zap } from 'lucide-react';
 
 export const ReportsPage = () => {
-  const { products, stockEntries, stockRequests, consumptionRecords, suppliers } = useApp();
-  const [period, setPeriod] = useState<'week' | 'month' | 'quarter' | 'semester' | 'year'>('month');
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [reportType, setReportType] = useState<'consumption' | 'entries' | 'projection' | 'suppliers'>('consumption');
+  const { products, stockEntries, stockRequests, suppliers, priceHistory, getStockAlerts } = useApp();
+  const [reportType, setReportType] = useState<'overview' | 'cross-analysis' | 'performance' | 'costs'>('overview');
+  const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
+  const [period, setPeriod] = useState<'week' | 'month' | 'quarter' | 'year'>('month');
 
-  // Generate mock consumption data based on period
-  const generateConsumptionData = () => {
-    const periods: Record<string, { labels: string[]; count: number }> = {
-      week: { labels: ['Seg', 'Ter', 'Qua', 'Qui', 'Sex'], count: 5 },
-      month: { labels: ['Sem 1', 'Sem 2', 'Sem 3', 'Sem 4'], count: 4 },
-      quarter: { labels: ['Mês 1', 'Mês 2', 'Mês 3'], count: 3 },
-      semester: { labels: ['Mês 1', 'Mês 2', 'Mês 3', 'Mês 4', 'Mês 5', 'Mês 6'], count: 6 },
-      year: { labels: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'], count: 12 },
+  const alerts = getStockAlerts();
+
+  // KPIs Estratégicos
+  const kpis = useMemo(() => {
+    const totalProducts = products.length;
+    const totalItems = products.reduce((sum, p) => sum + p.quantity, 0);
+    const lowStockCount = alerts.length;
+    const criticalCount = products.filter(p => p.quantity === 0).length;
+    const totalValue = products.reduce((sum, p) => sum + (p.quantity * (p.averagePrice || 0)), 0);
+    const pendingRequests = stockRequests.filter(r => r.status === 'pending').length;
+    
+    // Saúde do estoque (0-100)
+    const healthScore = Math.max(0, Math.min(100, 
+      100 - (lowStockCount / totalProducts * 100) - (criticalCount / totalProducts * 50)
+    ));
+
+    return {
+      totalProducts,
+      totalItems,
+      lowStockCount,
+      criticalCount,
+      totalValue,
+      pendingRequests,
+      healthScore,
+    };
+  }, [products, alerts, stockRequests]);
+
+  // Análise Cruzada - Usuário seleciona produtos para comparar
+  const crossAnalysisData = useMemo(() => {
+    if (selectedProducts.length === 0) return [];
+    
+    const periods: Record<string, string[]> = {
+      week: ['Seg', 'Ter', 'Qua', 'Qui', 'Sex'],
+      month: ['Sem 1', 'Sem 2', 'Sem 3', 'Sem 4'],
+      quarter: ['Mês 1', 'Mês 2', 'Mês 3'],
+      year: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'],
     };
 
-    const config = periods[period];
-    const filteredProducts = selectedCategory === 'all' 
-      ? products 
-      : products.filter(p => p.category === selectedCategory);
-
-    return config.labels.map((label, i) => {
+    const labels = periods[period];
+    
+    return labels.map(label => {
       const entry: Record<string, any> = { name: label };
-      filteredProducts.slice(0, 5).forEach(product => {
-        entry[product.name.substring(0, 15)] = Math.floor(Math.random() * 20) + 5;
+      selectedProducts.forEach(productId => {
+        const product = products.find(p => p.id === productId);
+        if (product) {
+          entry[product.name.substring(0, 20)] = Math.floor(Math.random() * 20) + 5;
+        }
       });
       return entry;
     });
-  };
+  }, [selectedProducts, period, products]);
 
-  // Generate projection data
-  const generateProjectionData = () => {
-    const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
-    const currentMonth = new Date().getMonth();
-    
-    return months.map((month, i) => ({
-      name: month,
-      real: i <= currentMonth ? Math.floor(Math.random() * 30) + 20 : null,
-      projecao: i >= currentMonth ? Math.floor(Math.random() * 30) + 20 : null,
-    }));
-  };
-
-  // Category analysis
-  const categoryAnalysis = useMemo(() => {
+  // Performance por categoria
+  const performanceData = useMemo(() => {
     const categories = [
-      { name: 'Limpeza', color: '#3b82f6', products: products.filter(p => p.category === 'limpeza') },
-      { name: 'Copa', color: '#f59e0b', products: products.filter(p => p.category === 'copa') },
-      { name: 'Água', color: '#06b6d4', products: products.filter(p => p.category === 'agua') },
+      { name: 'Limpeza', key: 'limpeza', color: '#3b82f6' },
+      { name: 'Copa', key: 'copa', color: '#f59e0b' },
+      { name: 'Água', key: 'agua', color: '#06b6d4' },
     ];
 
-    return categories.map(cat => ({
-      name: cat.name,
-      color: cat.color,
-      totalItems: cat.products.reduce((sum, p) => sum + p.quantity, 0),
-      productCount: cat.products.length,
-      avgConsumption: Math.floor(Math.random() * 15) + 5,
-      lowStock: cat.products.filter(p => p.quantity <= p.minQuantity).length,
-    }));
-  }, [products]);
+    return categories.map(cat => {
+      const catProducts = products.filter(p => p.category === cat.key);
+      const totalItems = catProducts.reduce((sum, p) => sum + p.quantity, 0);
+      const lowStock = catProducts.filter(p => p.quantity <= p.minQuantity).length;
+      const avgHealth = catProducts.length > 0 
+        ? catProducts.reduce((sum, p) => sum + Math.min(100, (p.quantity / (p.minQuantity * 2)) * 100), 0) / catProducts.length
+        : 0;
 
-  // Supplier analysis
-  const supplierAnalysis = useMemo(() => {
-    return suppliers.map(supplier => {
-      const entries = stockEntries.filter(e => e.supplierId === supplier.id);
       return {
-        name: supplier.name,
-        totalEntries: entries.length,
-        totalItems: entries.reduce((sum, e) => sum + e.quantity, 0),
-        lastEntry: entries.length > 0 ? new Date(entries[entries.length - 1].date).toLocaleDateString('pt-BR') : 'Nunca',
+        name: cat.name,
+        color: cat.color,
+        products: catProducts.length,
+        items: totalItems,
+        alerts: lowStock,
+        health: Math.round(avgHealth),
       };
     });
-  }, [suppliers, stockEntries]);
+  }, [products]);
 
-  const consumptionData = generateConsumptionData();
-  const projectionData = generateProjectionData();
+  // Análise de custos
+  const costAnalysis = useMemo(() => {
+    const totalInvestment = products.reduce((sum, p) => sum + (p.quantity * (p.averagePrice || 0)), 0);
+    const totalQuantity = products.reduce((sum, p) => sum + p.quantity, 0);
+    const avgPricePerItem = totalQuantity > 0 ? totalInvestment / totalQuantity : 0;
+    
+    // Top 5 produtos mais caros
+    const topExpensive = products
+      .filter(p => p.averagePrice)
+      .sort((a, b) => (b.averagePrice || 0) - (a.averagePrice || 0))
+      .slice(0, 5);
 
-  const COLORS = ['#3b82f6', '#f59e0b', '#06b6d4', '#10b981', '#8b5cf6'];
+    return {
+      totalInvestment,
+      avgPricePerItem,
+      topExpensive,
+    };
+  }, [products]);
+
+  const toggleProduct = (productId: string) => {
+    setSelectedProducts(prev => 
+      prev.includes(productId) 
+        ? prev.filter(id => id !== productId)
+        : [...prev, productId]
+    );
+  };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold text-gray-800">Relatórios e Análises</h2>
-          <p className="text-sm text-gray-500">Análise detalhada do consumo e estoque</p>
+          <h2 className="text-2xl font-bold text-gray-800">Relatórios e Análises</h2>
+          <p className="text-gray-600">Indicadores estratégicos para tomada de decisão</p>
         </div>
-        <button className="btn-secondary flex items-center gap-2">
-          <Download className="w-4 h-4" />
-          Exportar
+      </div>
+
+      {/* KPIs Principais */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-4 text-white">
+          <div className="flex items-center justify-between mb-2">
+            <Package className="w-6 h-6 opacity-80" />
+            <span className="text-2xl font-bold">{kpis.totalProducts}</span>
+          </div>
+          <p className="text-sm opacity-90">Produtos Cadastrados</p>
+        </div>
+
+        <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-4 text-white">
+          <div className="flex items-center justify-between mb-2">
+            <CheckCircle className="w-6 h-6 opacity-80" />
+            <span className="text-2xl font-bold">{kpis.totalItems}</span>
+          </div>
+          <p className="text-sm opacity-90">Total em Estoque</p>
+        </div>
+
+        <div className="bg-gradient-to-br from-amber-500 to-amber-600 rounded-xl p-4 text-white">
+          <div className="flex items-center justify-between mb-2">
+            <AlertTriangle className="w-6 h-6 opacity-80" />
+            <span className="text-2xl font-bold">{kpis.lowStockCount}</span>
+          </div>
+          <p className="text-sm opacity-90">Estoque Baixo</p>
+        </div>
+
+        <div className={`bg-gradient-to-br rounded-xl p-4 text-white ${
+          kpis.healthScore >= 80 ? 'from-green-500 to-green-600' :
+          kpis.healthScore >= 60 ? 'from-amber-500 to-amber-600' :
+          'from-red-500 to-red-600'
+        }`}>
+          <div className="flex items-center justify-between mb-2">
+            <Target className="w-6 h-6 opacity-80" />
+            <span className="text-2xl font-bold">{kpis.healthScore}%</span>
+          </div>
+          <p className="text-sm opacity-90">Saúde do Estoque</p>
+        </div>
+      </div>
+
+      {/* Tabs de Relatórios */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-1 flex gap-1 overflow-x-auto">
+        <button
+          onClick={() => setReportType('overview')}
+          className={`px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap ${
+            reportType === 'overview' ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-100'
+          }`}
+        >
+          Visão Geral
+        </button>
+        <button
+          onClick={() => setReportType('cross-analysis')}
+          className={`px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap ${
+            reportType === 'cross-analysis' ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-100'
+          }`}
+        >
+          Análise Cruzada
+        </button>
+        <button
+          onClick={() => setReportType('performance')}
+          className={`px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap ${
+            reportType === 'performance' ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-100'
+          }`}
+        >
+          Performance
+        </button>
+        <button
+          onClick={() => setReportType('costs')}
+          className={`px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap ${
+            reportType === 'costs' ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-100'
+          }`}
+        >
+          Análise de Custos
         </button>
       </div>
 
-      {/* Filters */}
-      <div className="card">
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="flex-1">
-            <label className="block text-xs font-medium text-gray-500 mb-1">Tipo de Relatório</label>
-            <div className="flex flex-wrap gap-2">
-              {[
-                { value: 'consumption', label: 'Consumo' },
-                { value: 'entries', label: 'Entradas' },
-                { value: 'projection', label: 'Projeção' },
-                { value: 'suppliers', label: 'Fornecedores' },
-              ].map(type => (
-                <button
-                  key={type.value}
-                  onClick={() => setReportType(type.value as any)}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                    reportType === type.value
-                      ? 'bg-blue-600 text-white shadow-sm'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}
-                >
-                  {type.label}
-                </button>
+      {/* Conteúdo por Tipo de Relatório */}
+      {reportType === 'overview' && (
+        <div className="space-y-6">
+          {/* Gráfico de Saúde por Categoria */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">Saúde do Estoque por Categoria</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {performanceData.map((cat, i) => (
+                <div key={i} className="border border-gray-200 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="font-semibold text-gray-800">{cat.name}</h4>
+                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: cat.color }} />
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Produtos</span>
+                      <span className="font-semibold">{cat.products}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Total Itens</span>
+                      <span className="font-semibold">{cat.items}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Alertas</span>
+                      <span className={`font-semibold ${cat.alerts > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                        {cat.alerts}
+                      </span>
+                    </div>
+                    <div className="mt-3">
+                      <div className="flex justify-between text-xs text-gray-500 mb-1">
+                        <span>Saúde</span>
+                        <span>{cat.health}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div 
+                          className={`h-2 rounded-full transition-all ${
+                            cat.health >= 80 ? 'bg-green-500' :
+                            cat.health >= 60 ? 'bg-amber-500' : 'bg-red-500'
+                          }`}
+                          style={{ width: `${cat.health}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
               ))}
             </div>
           </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">Período</label>
-            <select
-              value={period}
-              onChange={(e) => setPeriod(e.target.value as any)}
-              className="input-field"
-            >
-              <option value="week">Semanal</option>
-              <option value="month">Mensal</option>
-              <option value="quarter">Trimestral</option>
-              <option value="semester">Semestral</option>
-              <option value="year">Anual</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">Categoria</label>
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="input-field"
-            >
-              <option value="all">Todas</option>
-              <option value="limpeza">Limpeza</option>
-              <option value="copa">Copa</option>
-              <option value="agua">Água</option>
-            </select>
-          </div>
-        </div>
-      </div>
 
-      {/* Report Content */}
-      {reportType === 'consumption' && (
-        <div className="space-y-4">
-          {/* Consumption Chart */}
-          <div className="card">
-            <h3 className="text-base font-semibold text-gray-800 mb-4">
-              Consumo por Produto - {period === 'week' ? 'Semanal' : period === 'month' ? 'Mensal' : period === 'quarter' ? 'Trimestral' : period === 'semester' ? 'Semestral' : 'Anual'}
-            </h3>
-            <div className="h-72">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={consumptionData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                  <XAxis dataKey="name" stroke="#94a3b8" fontSize={11} />
-                  <YAxis stroke="#94a3b8" fontSize={11} />
-                  <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '12px' }} />
-                  <Legend wrapperStyle={{ fontSize: '11px' }} />
-                  {Object.keys(consumptionData[0] || {}).filter(k => k !== 'name').map((key, i) => (
-                    <Bar key={key} dataKey={key} fill={COLORS[i % COLORS.length]} radius={[2, 2, 0, 0]} />
-                  ))}
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          {/* Category Analysis */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {categoryAnalysis.map((cat, i) => (
-              <div key={i} className="card">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: cat.color + '20' }}>
-                    <Package className="w-5 h-5" style={{ color: cat.color }} />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-gray-800">{cat.name}</p>
-                    <p className="text-xs text-gray-500">{cat.productCount} produtos</p>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-500">Total em estoque</span>
-                    <span className="font-semibold">{cat.totalItems}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-500">Consumo médio/periodo</span>
-                    <span className="font-semibold">{cat.avgConsumption}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-500">Itens em alerta</span>
-                    <span className={`font-semibold ${cat.lowStock > 0 ? 'text-red-600' : 'text-green-600'}`}>{cat.lowStock}</span>
-                  </div>
+          {/* Alertas Críticos */}
+          {alerts.length > 0 && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <div className="flex items-start">
+                <AlertTriangle className="w-6 h-6 text-red-600 mr-3 flex-shrink-0" />
+                <div>
+                  <h3 className="font-semibold text-red-800">Atenção: {alerts.length} produto(s) com estoque baixo</h3>
+                  <p className="text-red-700 text-sm mt-1">
+                    {kpis.criticalCount} produto(s) sem estoque e {kpis.lowStockCount - kpis.criticalCount} abaixo do mínimo
+                  </p>
                 </div>
               </div>
-            ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {reportType === 'cross-analysis' && (
+        <div className="space-y-6">
+          {/* Seleção de Produtos */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">Selecione Produtos para Comparar</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Escolha até 5 produtos para analisar o consumo comparativo
+            </p>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 max-h-64 overflow-y-auto">
+              {products.map(product => (
+                <label
+                  key={product.id}
+                  className={`flex items-center gap-2 p-3 border rounded-lg cursor-pointer transition-colors ${
+                    selectedProducts.includes(product.id)
+                      ? 'border-blue-500 bg-blue-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedProducts.includes(product.id)}
+                    onChange={() => toggleProduct(product.id)}
+                    className="w-4 h-4 text-blue-600 rounded"
+                    disabled={!selectedProducts.includes(product.id) && selectedProducts.length >= 5}
+                  />
+                  <span className="text-sm text-gray-800 flex-1">{product.name}</span>
+                </label>
+              ))}
+            </div>
+
+            {selectedProducts.length > 0 && (
+              <div className="mt-4 flex gap-2">
+                <button
+                  onClick={() => setPeriod('week')}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium ${
+                    period === 'week' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700'
+                  }`}
+                >
+                  Semanal
+                </button>
+                <button
+                  onClick={() => setPeriod('month')}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium ${
+                    period === 'month' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700'
+                  }`}
+                >
+                  Mensal
+                </button>
+                <button
+                  onClick={() => setPeriod('quarter')}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium ${
+                    period === 'quarter' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700'
+                  }`}
+                >
+                  Trimestral
+                </button>
+                <button
+                  onClick={() => setPeriod('year')}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium ${
+                    period === 'year' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700'
+                  }`}
+                >
+                  Anual
+                </button>
+              </div>
+            )}
           </div>
 
-          {/* Cross-analysis */}
-          <div className="card">
-            <h3 className="text-base font-semibold text-gray-800 mb-4">Análise Cruzada - Copa (Café + Açúcar + Copos)</h3>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={consumptionData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                  <XAxis dataKey="name" stroke="#94a3b8" fontSize={11} />
-                  <YAxis stroke="#94a3b8" fontSize={11} />
-                  <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '12px' }} />
-                  <Legend wrapperStyle={{ fontSize: '11px' }} />
-                  <Area type="monotone" dataKey="Café em Pó 500g" stackId="1" stroke="#f59e0b" fill="#f59e0b" fillOpacity={0.3} />
-                  <Area type="monotone" dataKey="Açúcar Cristal" stackId="1" stroke="#10b981" fill="#10b981" fillOpacity={0.3} />
-                  <Area type="monotone" dataKey="Copo Descartável" stackId="1" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.3} />
+          {/* Gráfico de Análise Cruzada */}
+          {selectedProducts.length > 0 && (
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                Comparativo de Consumo - {selectedProducts.length} produto(s)
+              </h3>
+              <ResponsiveContainer width="100%" height={400}>
+                <AreaChart data={crossAnalysisData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  {selectedProducts.map((productId, index) => {
+                    const product = products.find(p => p.id === productId);
+                    const colors = ['#3b82f6', '#f59e0b', '#10b981', '#8b5cf6', '#ef4444'];
+                    const dataKey = product ? product.name.substring(0, 20) : `Produto ${productId}`;
+                    return (
+                      <Area
+                        key={productId}
+                        type="monotone"
+                        dataKey={dataKey}
+                        stackId="1"
+                        stroke={colors[index % colors.length]}
+                        fill={colors[index % colors.length]}
+                        fillOpacity={0.6}
+                      />
+                    );
+                  })}
                 </AreaChart>
               </ResponsiveContainer>
             </div>
-          </div>
+          )}
+
+          {selectedProducts.length === 0 && (
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-12 text-center">
+              <Package className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-600">Selecione produtos acima para visualizar a análise cruzada</p>
+            </div>
+          )}
         </div>
       )}
 
-      {reportType === 'projection' && (
-        <div className="space-y-4">
-          <div className="card">
-            <h3 className="text-base font-semibold text-gray-800 mb-4">Projeção de Consumo Anual</h3>
-            <div className="h-72">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={projectionData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                  <XAxis dataKey="name" stroke="#94a3b8" fontSize={11} />
-                  <YAxis stroke="#94a3b8" fontSize={11} />
-                  <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '12px' }} />
-                  <Legend wrapperStyle={{ fontSize: '11px' }} />
-                  <Line type="monotone" dataKey="real" stroke="#3b82f6" strokeWidth={2} dot={{ r: 4 }} name="Consumo Real" />
-                  <Line type="monotone" dataKey="projecao" stroke="#f59e0b" strokeWidth={2} strokeDasharray="5 5" dot={{ r: 4 }} name="Projeção" />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
+      {reportType === 'performance' && (
+        <div className="space-y-6">
+          {/* Radar de Performance */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">Radar de Performance por Categoria</h3>
+            <ResponsiveContainer width="100%" height={400}>
+              <RadarChart data={performanceData}>
+                <PolarGrid />
+                <PolarAngleAxis dataKey="name" />
+                <PolarRadiusAxis angle={90} domain={[0, 100]} />
+                <Radar name="Saúde" dataKey="health" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.6} />
+                <Tooltip />
+              </RadarChart>
+            </ResponsiveContainer>
           </div>
 
-          {/* Projection Summary */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {products.slice(0, 4).map(product => {
-              const avgConsumption = Math.floor(Math.random() * 10) + 5;
-              const daysRemaining = Math.floor((product.quantity / avgConsumption) * 7);
-              return (
-                <div key={product.id} className="card">
-                  <p className="text-sm font-medium text-gray-800 truncate">{product.name}</p>
-                  <div className="mt-3 space-y-2">
-                    <div className="flex justify-between text-xs">
-                      <span className="text-gray-500">Estoque atual</span>
-                      <span className="font-semibold">{product.quantity}</span>
-                    </div>
-                    <div className="flex justify-between text-xs">
-                      <span className="text-gray-500">Consumo médio/sem</span>
-                      <span className="font-semibold">{avgConsumption}</span>
-                    </div>
-                    <div className="flex justify-between text-xs">
-                      <span className="text-gray-500">Dias restantes</span>
-                      <span className={`font-semibold ${daysRemaining < 14 ? 'text-red-600' : daysRemaining < 30 ? 'text-amber-600' : 'text-green-600'}`}>
-                        ~{daysRemaining} dias
-                      </span>
-                    </div>
-                  </div>
-                  <div className="mt-3 w-full bg-gray-100 rounded-full h-2">
-                    <div 
-                      className={`h-2 rounded-full ${daysRemaining < 14 ? 'bg-red-500' : daysRemaining < 30 ? 'bg-amber-500' : 'bg-green-500'}`}
-                      style={{ width: `${Math.min(100, (product.quantity / (product.minQuantity * 3)) * 100)}%` }}
-                    />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {reportType === 'entries' && (
-        <div className="space-y-4">
-          <div className="card">
-            <h3 className="text-base font-semibold text-gray-800 mb-4">Entradas por Período</h3>
-            <div className="h-72">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={consumptionData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                  <XAxis dataKey="name" stroke="#94a3b8" fontSize={11} />
-                  <YAxis stroke="#94a3b8" fontSize={11} />
-                  <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '12px' }} />
-                  <Bar dataKey="Café em Pó 500g" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="Detergente Líq" fill="#10b981" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          {/* Summary Table */}
-          <div className="card overflow-hidden p-0">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50 border-b border-gray-100">
-                  <tr>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Produto</th>
-                    <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Total Entradas</th>
-                    <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Estoque Atual</th>
-                    <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Consumo Est.</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
-                  {products.map(product => (
-                    <tr key={product.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 text-sm text-gray-800">{product.name}</td>
-                      <td className="px-4 py-3 text-center text-sm font-semibold text-green-600">
-                        {stockEntries.filter(e => e.productId === product.id).reduce((sum, e) => sum + e.quantity, 0) || '-'}
-                      </td>
-                      <td className="px-4 py-3 text-center text-sm font-semibold">{product.quantity}</td>
-                      <td className="px-4 py-3 text-center text-sm text-gray-600">{Math.floor(Math.random() * 15) + 3}/mês</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {reportType === 'suppliers' && (
-        <div className="space-y-4">
+          {/* Métricas Detalhadas */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {supplierAnalysis.map((supplier, i) => (
-              <div key={i} className="card">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center">
-                    <TrendingUp className="w-5 h-5 text-purple-600" />
+            {performanceData.map((cat, i) => (
+              <div key={i} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ backgroundColor: cat.color + '20' }}>
+                    <Package className="w-6 h-6" style={{ color: cat.color }} />
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-gray-800 truncate">{supplier.name}</p>
-                    <p className="text-xs text-gray-500">Última: {supplier.lastEntry}</p>
+                    <h4 className="font-semibold text-gray-800">{cat.name}</h4>
+                    <p className="text-sm text-gray-500">{cat.products} produtos</p>
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-500">Total de entradas</span>
-                    <span className="font-semibold">{supplier.totalEntries}</span>
+                <div className="space-y-3">
+                  <div>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span className="text-gray-600">Saúde do Estoque</span>
+                      <span className="font-semibold">{cat.health}%</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className={`h-2 rounded-full ${
+                          cat.health >= 80 ? 'bg-green-500' :
+                          cat.health >= 60 ? 'bg-amber-500' : 'bg-red-500'
+                        }`}
+                        style={{ width: `${cat.health}%` }}
+                      />
+                    </div>
+                  </div>
+                  <div className="flex justify-between text-sm pt-2 border-t border-gray-100">
+                    <span className="text-gray-600">Total de Itens</span>
+                    <span className="font-semibold">{cat.items}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-500">Total de itens</span>
-                    <span className="font-semibold">{supplier.totalItems}</span>
+                    <span className="text-gray-600">Alertas</span>
+                    <span className={`font-semibold ${cat.alerts > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                      {cat.alerts}
+                    </span>
                   </div>
                 </div>
               </div>
             ))}
           </div>
+        </div>
+      )}
 
-          {/* Supplier Chart */}
-          <div className="card">
-            <h3 className="text-base font-semibold text-gray-800 mb-4">Distribuição de Fornecimento</h3>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={supplierAnalysis.map(s => ({ name: s.name, value: s.totalItems || 1 }))}
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={80}
-                    dataKey="value"
-                    label={({ name, percent }) => `${name.substring(0, 15)}... (${(percent * 100).toFixed(0)}%)`}
-                    labelLine={false}
-                  >
-                    {supplierAnalysis.map((_, i) => (
-                      <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
+      {reportType === 'costs' && (
+        <div className="space-y-6">
+          {/* KPIs de Custo */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-6 text-white">
+              <div className="flex items-center justify-between mb-2">
+                <DollarSign className="w-8 h-8 opacity-80" />
+                <span className="text-3xl font-bold">
+                  R$ {kpis.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </span>
+              </div>
+              <p className="text-sm opacity-90">Valor Total em Estoque</p>
+            </div>
+
+            <div className="bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl p-6 text-white">
+              <div className="flex items-center justify-between mb-2">
+                <Zap className="w-8 h-8 opacity-80" />
+                <span className="text-3xl font-bold">
+                  R$ {costAnalysis.avgPricePerItem.toFixed(2)}
+                </span>
+              </div>
+              <p className="text-sm opacity-90">Preço Médio por Item</p>
+            </div>
+          </div>
+
+          {/* Top 5 Produtos Mais Caros */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">Top 5 Produtos - Maior Valor Unitário</h3>
+            <div className="space-y-3">
+              {costAnalysis.topExpensive.map((product, i) => (
+                <div key={product.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                      <span className="text-sm font-bold text-purple-600">#{i + 1}</span>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-800">{product.name}</p>
+                      <p className="text-xs text-gray-500">{product.quantity} {product.unit}(s) em estoque</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-lg font-bold text-purple-600">
+                      R$ {(product.averagePrice || 0).toFixed(2)}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      Total: R$ {((product.averagePrice || 0) * product.quantity).toFixed(2)}
+                    </p>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
