@@ -15,6 +15,10 @@ import { StockPage } from './pages/StockPage';
 import { LocationsPage } from './pages/LocationsPage';
 import { PhysicalInventoryPage } from './pages/PhysicalInventoryPage';
 import { AuditPage } from './pages/AuditPage';
+import { ExpirationPage } from './pages/ExpirationPage';
+import { PriceHistoryPage } from './pages/PriceHistoryPage';
+import { PurchaseSchedulePage } from './pages/PurchaseSchedulePage';
+import { BarcodePage } from './pages/BarcodePage';
 import { Layout } from './components/Layout';
 import { CommandPalette } from './components/CommandPalette';
 
@@ -65,6 +69,10 @@ const AppContent = () => {
       case 'locations': return <LocationsPage />;
       case 'physical-inventory': return <PhysicalInventoryPage />;
       case 'audit': return <AuditPage />;
+      case 'expiration': return <ExpirationPage />;
+      case 'price-history': return <PriceHistoryPage />;
+      case 'purchase-schedule': return <PurchaseSchedulePage />;
+      case 'barcode': return <BarcodePage />;
       case 'requests': return <RequestsPage />;
       case 'reports': return <ReportsPage />;
       case 'alerts': return <AlertsPage />;

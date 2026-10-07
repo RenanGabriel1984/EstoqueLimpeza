@@ -12,7 +12,7 @@ interface LayoutProps {
   onNavigate: (page: string) => void;
 }
 
-import { ClipboardCheck, Shield } from 'lucide-react';
+import { ClipboardCheck, Shield, Calendar, DollarSign, QrCode, Clock } from 'lucide-react';
 
 const menuItems = [
   { id: 'dashboard', label: 'Painel', icon: LayoutDashboard, roles: ['secretario', 'diretor', 'tecnico', 'copa'] },
@@ -21,6 +21,10 @@ const menuItems = [
   { id: 'inventory', label: 'Cadastro Produtos', icon: Package, roles: ['secretario', 'diretor', 'tecnico'] },
   { id: 'invoices', label: 'Notas Fiscais', icon: FileText, roles: ['secretario', 'diretor', 'tecnico'] },
   { id: 'locations', label: 'Locais', icon: MapPin, roles: ['secretario', 'diretor', 'tecnico'] },
+  { id: 'barcode', label: 'Códigos', icon: QrCode, roles: ['secretario', 'diretor', 'tecnico'] },
+  { id: 'expiration', label: 'Validade', icon: Clock, roles: ['secretario', 'diretor', 'tecnico'] },
+  { id: 'price-history', label: 'Preços', icon: DollarSign, roles: ['secretario', 'diretor'] },
+  { id: 'purchase-schedule', label: 'Compras', icon: Calendar, roles: ['secretario', 'diretor'] },
   { id: 'physical-inventory', label: 'Inventário Físico', icon: ClipboardCheck, roles: ['secretario', 'diretor', 'tecnico'] },
   { id: 'audit', label: 'Auditoria', icon: Shield, roles: ['secretario', 'diretor'] },
   { id: 'requests', label: 'Requisições', icon: ClipboardList, roles: ['secretario', 'diretor', 'tecnico', 'copa'] },

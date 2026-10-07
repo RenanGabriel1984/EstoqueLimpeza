@@ -23,6 +23,30 @@ export interface Product {
   quantity: number;
   minQuantity: number;
   locationId: string;
+  expirationDate?: string;
+  barcode?: string;
+  lastPurchasePrice?: number;
+  averagePrice?: number;
+}
+
+export interface PriceHistory {
+  id: string;
+  productId: string;
+  price: number;
+  quantity: number;
+  date: string;
+  supplierId: string;
+  invoiceNumber: string;
+}
+
+export interface PurchaseSchedule {
+  id: string;
+  productId: string;
+  estimatedDate: string;
+  estimatedQuantity: number;
+  status: 'planned' | 'in_progress' | 'completed' | 'cancelled';
+  biddingProcess?: string;
+  notes?: string;
 }
 
 export interface Supplier {
@@ -101,6 +125,8 @@ interface AppState {
   consumptionRecords: ConsumptionRecord[];
   auditLogs: AuditLog[];
   physicalInventories: PhysicalInventory[];
+  priceHistory: PriceHistory[];
+  purchaseSchedule: PurchaseSchedule[];
   currentUser: User | null;
   darkMode: boolean;
 }
@@ -129,6 +155,12 @@ interface AppContextType extends AppState {
   toggleDarkMode: () => void;
   exportData: () => string;
   importData: (data: string) => boolean;
+  addPriceHistory: (entry: PriceHistory) => void;
+  getPriceHistory: (productId: string) => PriceHistory[];
+  addPurchaseSchedule: (schedule: PurchaseSchedule) => void;
+  updatePurchaseSchedule: (schedule: PurchaseSchedule) => void;
+  getProductsExpiringSoon: (days: number) => Product[];
+  generateBarcode: (productId: string) => string;
 }
 
 const defaultLocations: StorageLocation[] = [
@@ -218,6 +250,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       consumptionRecords: [],
       auditLogs: [],
       physicalInventories: [],
+      priceHistory: [],
+      purchaseSchedule: [],
       currentUser: null,
       darkMode: false,
     };
@@ -370,6 +404,65 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const addPriceHistory = (entry: PriceHistory) => {
+    setState(prev => {
+      const history = [...prev.priceHistory, entry];
+      // Calculate average price for the product
+      const productEntries = history.filter(h => h.productId === entry.productId);
+      const totalValue = productEntries.reduce((sum, h) => sum + (h.price * h.quantity), 0);
+      const totalQuantity = productEntries.reduce((sum, h) => sum + h.quantity, 0);
+      const avgPrice = totalQuantity > 0 ? totalValue / totalQuantity : entry.price;
+      
+      // Update product with average price
+      const updatedProducts = prev.products.map(p => 
+        p.id === entry.productId 
+          ? { ...p, lastPurchasePrice: entry.price, averagePrice: avgPrice }
+          : p
+      );
+      
+      return {
+        ...prev,
+        priceHistory: history,
+        products: updatedProducts,
+      };
+    });
+  };
+
+  const getPriceHistory = (productId: string): PriceHistory[] => {
+    return state.priceHistory
+      .filter(h => h.productId === productId)
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  };
+
+  const addPurchaseSchedule = (schedule: PurchaseSchedule) => {
+    setState(prev => ({ ...prev, purchaseSchedule: [...prev.purchaseSchedule, schedule] }));
+  };
+
+  const updatePurchaseSchedule = (schedule: PurchaseSchedule) => {
+    setState(prev => ({
+      ...prev,
+      purchaseSchedule: prev.purchaseSchedule.map(s => s.id === schedule.id ? schedule : s),
+    }));
+  };
+
+  const getProductsExpiringSoon = (days: number): Product[] => {
+    const now = new Date();
+    const futureDate = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
+    return state.products.filter(p => {
+      if (!p.expirationDate) return false;
+      const expDate = new Date(p.expirationDate);
+      return expDate <= futureDate && expDate >= now;
+    });
+  };
+
+  const generateBarcode = (productId: string): string => {
+    // Generate a simple barcode-like string (EAN-13 format simulation)
+    const prefix = '789'; // Brazil
+    const productCode = productId.padStart(5, '0').slice(0, 5);
+    const random = Math.floor(Math.random() * 100000).toString().padStart(5, '0');
+    return `${prefix}${productCode}${random}`;
+  };
+
   return (
     <AppContext.Provider value={{
       ...state,
@@ -396,6 +489,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       toggleDarkMode,
       exportData,
       importData,
+      addPriceHistory,
+      getPriceHistory,
+      addPurchaseSchedule,
+      updatePurchaseSchedule,
+      getProductsExpiringSoon,
+      generateBarcode,
     }}>
       {children}
     </AppContext.Provider>
