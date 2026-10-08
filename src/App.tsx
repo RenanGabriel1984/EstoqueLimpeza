@@ -19,7 +19,6 @@ import { ExpirationPage } from './pages/ExpirationPage';
 import { PriceHistoryPage } from './pages/PriceHistoryPage';
 import { PurchaseSchedulePage } from './pages/PurchaseSchedulePage';
 import { BarcodePage } from './pages/BarcodePage';
-import { PDFImportPage } from './pages/PDFImportPage';
 import { Layout } from './components/Layout';
 import { CommandPalette } from './components/CommandPalette';
 
@@ -74,7 +73,6 @@ const AppContent = () => {
       case 'price-history': return <PriceHistoryPage />;
       case 'purchase-schedule': return <PurchaseSchedulePage />;
       case 'barcode': return <BarcodePage />;
-      case 'pdf-import': return <PDFImportPage />;
       case 'requests': return <RequestsPage />;
       case 'reports': return <ReportsPage />;
       case 'alerts': return <AlertsPage />;
