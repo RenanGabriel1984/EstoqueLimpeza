@@ -20,6 +20,7 @@ const menuItems = [
   { id: 'entry', label: 'Entrada', icon: LogIn, roles: ['secretario', 'diretor', 'tecnico'] },
   { id: 'inventory', label: 'Cadastro Produtos', icon: Package, roles: ['secretario', 'diretor', 'tecnico'] },
   { id: 'invoices', label: 'Notas Fiscais', icon: FileText, roles: ['secretario', 'diretor', 'tecnico'] },
+  { id: 'pdf-import', label: 'Importar PDF', icon: FileText, roles: ['secretario', 'diretor', 'tecnico'] },
   { id: 'locations', label: 'Locais', icon: MapPin, roles: ['secretario', 'diretor', 'tecnico'] },
   { id: 'barcode', label: 'Códigos', icon: QrCode, roles: ['secretario', 'diretor', 'tecnico'] },
   { id: 'expiration', label: 'Validade', icon: Clock, roles: ['secretario', 'diretor', 'tecnico'] },
